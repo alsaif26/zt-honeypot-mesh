@@ -1,0 +1,70 @@
+networks:
+  honeypot-mesh:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  honeypot-logs:
+    driver: local
+
+services:
+
+  ssh-honeypot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zt-ssh-honeypot
+    restart: unless-stopped
+    ports:
+      - "2222:2222"
+    volumes:
+      - honeypot-logs:/app/logs
+    environment:
+      SSH_HOST: "0.0.0.0"
+      SSH_PORT: "2222"
+      LOG_DIR: "/app/logs"
+      NODE_ID: "node-ssh-01"
+      NODE_ROLE: "ssh-honeypot"
+    networks:
+      honeypot-mesh:
+        ipv4_address: 172.20.0.10
+
+  http-honeypot:
+    build:
+      context: .
+      dockerfile: Dockerfile.http
+    container_name: zt-http-honeypot
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - honeypot-logs:/app/logs
+    environment:
+      HTTP_PORT: "8080"
+      LOG_DIR: "/app/logs"
+      NODE_ID: "node-http-01"
+      NODE_ROLE: "http-honeypot"
+    networks:
+      honeypot-mesh:
+        ipv4_address: 172.20.0.11
+
+  smb-honeypot:
+    build:
+      context: .
+      dockerfile: Dockerfile.smb
+    container_name: zt-smb-honeypot
+    restart: unless-stopped
+    ports:
+      - "4445:4445"
+    volumes:
+      - honeypot-logs:/app/logs
+    environment:
+      SMB_PORT: "4445"
+      LOG_DIR: "/app/logs"
+      NODE_ID: "node-smb-01"
+      NODE_ROLE: "smb-honeypot"
+    networks:
+      honeypot-mesh:
+        ipv4_address: 172.20.0.12

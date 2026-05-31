@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🍯 Zero-Trust Honeypot Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <h1>🍯 Zero-Trust Honeypot Mesh</h1>
+        <p class="subtitle">Real-time Attack Monitor</p>
+    </div>
+    <div class="header-right">
+        <span class="live-badge">● LIVE</span>
+        <button onclick="exportPDF()" class="btn btn-pdf">📄 PDF</button>
+        <button onclick="window.location='/api/export/csv'" class="btn btn-csv">📊 CSV</button>
+        <button onclick="window.location='/api/stats'" class="btn btn-json">{ } JSON</button>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="card card-ssh">
+        <div class="card-icon">🔐</div>
+        <div class="card-label">SSH ATTACKS</div>
+        <div class="card-number" id="ssh-count">0</div>
+    </div>
+    <div class="card card-http">
+        <div class="card-icon">🌐</div>
+        <div class="card-label">HTTP ATTACKS</div>
+        <div class="card-number" id="http-count">0</div>
+    </div>
+    <div class="card card-smb">
+        <div class="card-icon">📁</div>
+        <div class="card-label">SMB ATTACKS</div>
+        <div class="card-number" id="smb-count">0</div>
+    </div>
+    <div class="card card-total">
+        <div class="card-icon">⚡</div>
+        <div class="card-label">TOTAL ATTACKS</div>
+        <div class="card-number" id="total-count">0</div>
+    </div>
+    <div class="card card-high">
+        <div class="card-icon">🚨</div>
+        <div class="card-label">HIGH THREATS</div>
+        <div class="card-number" id="high-count">0</div>
+    </div>
+    <div class="card card-medium">
+        <div class="card-icon">⚠️</div>
+        <div class="card-label">MEDIUM THREATS</div>
+        <div class="card-number" id="medium-count">0</div>
+    </div>
+</div>
+
+<div class="charts-row">
+    <div class="chart-box">
+        <h2>📊 Attack Distribution</h2>
+        <canvas id="attackChart"></canvas>
+    </div>
+    <div class="chart-box">
+        <h2>🎯 MITRE ATT&CK</h2>
+        <canvas id="mitreChart"></canvas>
+    </div>
+</div>
+
+<div class="section">
+    <h2>🏆 Top Attacker IPs</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>IP Address</th>
+                <th>Attack Count</th>
+                <th>Threat Level</th>
+            </tr>
+        </thead>
+        <tbody id="ip-body"></tbody>
+    </table>
+</div>
+
+<div class="section">
+    <h2>🔍 Search & Filter</h2>
+    <div class="filter-row">
+        <input type="text" id="ip-search" placeholder="Search IP..." oninput="filterTable()">
+        <select id="type-filter" onchange="filterTable()">
+            <option value="">All Types</option>
+            <option value="AUTH_ATTEMPT_PASSWORD">SSH</option>
+            <option value="HTTP_LOGIN_ATTEMPT">HTTP</option>
+            <option value="SMB_CONNECTION_OPEN">SMB</option>
+        </select>
+    </div>
+</div>
+
+<div class="section">
+    <h2>📋 Live Attack Feed</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Type</th>
+                <th>Source IP</th>
+                <th>Username</th>
+                <th>Password</th>
+                <th>MITRE</th>
+                <th>Threat</th>
+            </tr>
+        </thead>
+        <tbody id="attack-body"></tbody>
+    </table>
+</div>
+
+<div class="footer">
+    Auto-refresh every 10 seconds | Zero-Trust Honeypot Mesh | Built with ❤️
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>

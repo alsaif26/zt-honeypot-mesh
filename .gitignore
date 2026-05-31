@@ -1,0 +1,30 @@
+# Virtual environment
+venv/
+
+# Log files — sensitive attack data
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# SSH keys
+*.pem
+*.key
+/tmp/honeypot_rsa_key
+
+# Environment variables
+.env
+.env.*
+
+# VS Code
+.vscode/
+
+# Docker
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
