@@ -68,3 +68,76 @@ services:
     networks:
       honeypot-mesh:
         ipv4_address: 172.20.0.12
+
+  mesh-controller:
+    build:
+      context: .
+      dockerfile: Dockerfile.analytics
+    container_name: zt-mesh-controller
+    restart: unless-stopped
+    command: ["python", "-u", "mesh/controller.py"]
+    volumes:
+      - honeypot-logs:/app/logs
+    environment:
+      LOG_DIR: "/app/logs"
+      NODE_ID: "node-mesh-01"
+      NODE_ROLE: "mesh-controller"
+      MAX_ATTEMPTS_PER_IP: "10"
+    depends_on:
+      - ssh-honeypot
+      - http-honeypot
+      - smb-honeypot
+    networks:
+      honeypot-mesh:
+        ipv4_address: 172.20.0.13
+
+  ai-detector:
+    build:
+      context: .
+      dockerfile: Dockerfile.analytics
+    container_name: zt-ai-detector
+    restart: unless-stopped
+    command: ["python", "-u", "ai/anomaly_detector.py"]
+    volumes:
+      - honeypot-logs:/app/logs
+    environment:
+      LOG_DIR: "/app/logs"
+      NODE_ID: "node-ai-01"
+      NODE_ROLE: "ai-detector"
+    depends_on:
+      - ssh-honeypot
+      - http-honeypot
+      - smb-honeypot
+    networks:
+      honeypot-mesh:
+        ipv4_address: 172.20.0.14
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: zt-dashboard
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    volumes:
+      - honeypot-logs:/app/logs
+    environment:
+      LOG_DIR: "/app/logs"
+      NODE_ID: "node-dashboard-01"
+      NODE_ROLE: "dashboard"
+      MAX_ATTEMPTS_PER_IP: "10"
+      REFRESH_INTERVAL: "10"
+      SSH_PROBE_HOST: "ssh-honeypot"
+      SSH_PROBE_PORT: "2222"
+      HTTP_PROBE_HOST: "http-honeypot"
+      HTTP_PROBE_PORT: "8080"
+      SMB_PROBE_HOST: "smb-honeypot"
+      SMB_PROBE_PORT: "4445"
+    depends_on:
+      - ssh-honeypot
+      - http-honeypot
+      - smb-honeypot
+    networks:
+      honeypot-mesh:
+        ipv4_address: 172.20.0.15

@@ -1,121 +1,421 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>🍯 Zero-Trust Honeypot Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="/static/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOC Command Center · Zero-Trust Honeypot Mesh</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 </head>
 <body>
 
-<div class="header">
-    <div class="header-left">
-        <h1>🍯 Zero-Trust Honeypot Mesh</h1>
-        <p class="subtitle">Real-time Attack Monitor</p>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<button id="nav-toggle" class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+  <span aria-hidden="true">☰</span>
+</button>
+
+<div class="layout">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">ZT</div>
+      <div class="brand-text">
+        <span class="brand-name">Zero-Trust</span>
+        <span class="brand-sub">Honeypot Mesh</span>
+      </div>
     </div>
-    <div class="header-right">
-        <span class="live-badge">● LIVE</span>
-        <button onclick="exportPDF()" class="btn btn-pdf">📄 PDF</button>
-        <button onclick="window.location='/api/export/csv'" class="btn btn-csv">📊 CSV</button>
-        <button onclick="window.location='/api/stats'" class="btn btn-json">{ } JSON</button>
+
+    <nav class="nav" aria-label="Sections">
+      <p class="nav-group-label">Monitoring</p>
+      <a class="nav-item active" href="#overview" data-nav>
+        <span class="nav-ico" aria-hidden="true">▤</span> Dashboard</a>
+      <a class="nav-item" href="#live-attacks" data-nav>
+        <span class="nav-ico" aria-hidden="true">◉</span> Live Attacks
+        <span class="nav-count" id="nav-count-attacks">–</span></a>
+      <a class="nav-item" href="#threat-intel" data-nav>
+        <span class="nav-ico" aria-hidden="true">◈</span> Threat Intelligence</a>
+      <a class="nav-item" href="#mitre" data-nav>
+        <span class="nav-ico" aria-hidden="true">⊞</span> MITRE ATT&amp;CK</a>
+
+      <p class="nav-group-label">Infrastructure</p>
+      <a class="nav-item" href="#honeypots" data-nav>
+        <span class="nav-ico" aria-hidden="true">⬢</span> Honeypots</a>
+      <a class="nav-item" href="#ai-detection" data-nav>
+        <span class="nav-ico" aria-hidden="true">◊</span> AI Detection</a>
+      <a class="nav-item" href="#quarantine" data-nav>
+        <span class="nav-ico" aria-hidden="true">⊘</span> Quarantine
+        <span class="nav-count" id="nav-count-quarantine">–</span></a>
+
+      <p class="nav-group-label">Operations</p>
+      <a class="nav-item" href="#reports" data-nav>
+        <span class="nav-ico" aria-hidden="true">⇩</span> Reports</a>
+      <a class="nav-item" href="#settings" data-nav>
+        <span class="nav-ico" aria-hidden="true">⚙</span> Settings</a>
+    </nav>
+
+    <div class="sidebar-services">
+      <p class="nav-group-label">Service Status</p>
+      <ul class="svc-list" id="svc-list">
+        <li class="svc-row" data-svc="ssh">
+          <span class="dot dot-unknown"></span><span class="svc-name">SSH</span>
+          <span class="svc-state">…</span>
+        </li>
+        <li class="svc-row" data-svc="http">
+          <span class="dot dot-unknown"></span><span class="svc-name">HTTP</span>
+          <span class="svc-state">…</span>
+        </li>
+        <li class="svc-row" data-svc="smb">
+          <span class="dot dot-unknown"></span><span class="svc-name">SMB</span>
+          <span class="svc-state">…</span>
+        </li>
+      </ul>
     </div>
+
+    <div class="sidebar-foot">
+      <div class="sys-row"><span>Mesh status</span><strong id="sys-mesh">–</strong></div>
+      <div class="sys-row"><span>Unique IPs</span><strong id="sys-ips">–</strong></div>
+      <div class="sys-row"><span>Data source</span><strong>JSON logs</strong></div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main" id="main">
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>SOC Command Center</h1>
+        <p class="topbar-sub">Zero-Trust Micro Honeypot Mesh · SME Defensive Monitoring</p>
+      </div>
+
+      <div class="topbar-tools">
+        <div class="search-wrap">
+          <span class="search-ico" aria-hidden="true">⌕</span>
+          <label class="sr-only" for="global-search">Search attack events</label>
+          <input id="global-search" type="search" placeholder="Search IP, user, technique…" autocomplete="off">
+        </div>
+
+        <div class="pill" id="refresh-pill" title="Automatic data refresh">
+          <span class="pulse" aria-hidden="true"></span>
+          <span id="refresh-label">LIVE</span>
+        </div>
+
+        <div class="pill pill-quiet" title="Timestamp of the latest successful API response">
+          Updated <strong id="last-updated">–</strong>
+        </div>
+
+        <div class="alert-wrap">
+          <button id="alert-btn" class="icon-btn" aria-haspopup="true" aria-expanded="false"
+                  aria-label="Open alerts">
+            <span aria-hidden="true">🔔</span>
+            <span class="badge-count hidden" id="alert-count">0</span>
+          </button>
+          <div class="alert-panel hidden" id="alert-panel" role="dialog" aria-label="Active alerts">
+            <div class="alert-panel-head">Active Alerts</div>
+            <ul id="alert-list" class="alert-list"><li class="empty">No data available</li></ul>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div id="conn-error" class="banner banner-error hidden" role="alert">
+      Unable to reach the dashboard API. Retrying…
+    </div>
+
+    <!-- ---------- OVERVIEW / KPI ---------- -->
+    <section id="overview" class="section" aria-labelledby="overview-h">
+      <div class="section-head">
+        <h2 id="overview-h">Security Overview</h2>
+        <span class="section-note">All values derived from captured honeypot events</span>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="kpi" data-tone="accent">
+          <div class="kpi-top"><span class="kpi-ico" aria-hidden="true">⚡</span>
+            <span class="kpi-label">Total Attacks</span></div>
+          <p class="kpi-value" id="kpi-total">–</p>
+          <p class="kpi-foot" id="kpi-total-foot">Captured attack events</p>
+        </article>
+
+        <article class="kpi" data-tone="ssh">
+          <div class="kpi-top"><span class="kpi-ico" aria-hidden="true">🔐</span>
+            <span class="kpi-label">SSH Attacks</span></div>
+          <p class="kpi-value" id="kpi-ssh">–</p>
+          <p class="kpi-foot">Port 2222 · brute force</p>
+        </article>
+
+        <article class="kpi" data-tone="http">
+          <div class="kpi-top"><span class="kpi-ico" aria-hidden="true">🌐</span>
+            <span class="kpi-label">HTTP Attacks</span></div>
+          <p class="kpi-value" id="kpi-http">–</p>
+          <p class="kpi-foot">Port 8080 · web login</p>
+        </article>
+
+        <article class="kpi" data-tone="smb">
+          <div class="kpi-top"><span class="kpi-ico" aria-hidden="true">📁</span>
+            <span class="kpi-label">SMB Attacks</span></div>
+          <p class="kpi-value" id="kpi-smb">–</p>
+          <p class="kpi-foot">Port 4445 · lateral movement</p>
+        </article>
+
+        <article class="kpi" data-tone="critical">
+          <div class="kpi-top"><span class="kpi-ico" aria-hidden="true">🚨</span>
+            <span class="kpi-label">High / Critical</span></div>
+          <p class="kpi-value" id="kpi-high">–</p>
+          <p class="kpi-foot" id="kpi-high-foot">High-severity source IPs</p>
+        </article>
+
+        <article class="kpi" data-tone="warn">
+          <div class="kpi-top"><span class="kpi-ico" aria-hidden="true">⊘</span>
+            <span class="kpi-label">Quarantined IPs</span></div>
+          <p class="kpi-value" id="kpi-quarantine">–</p>
+          <p class="kpi-foot" id="kpi-quarantine-foot">Mesh controller blocklist</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ---------- ANALYTICS ---------- -->
+    <section id="threat-intel" class="section" aria-labelledby="analytics-h">
+      <div class="section-head">
+        <h2 id="analytics-h">Attack Analytics</h2>
+        <span class="section-note">Live charts rendered from the /api/stats payload</span>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>Attack Distribution</h3><span class="panel-note">by service</span></div>
+          <div class="chart-holder"><canvas id="chart-dist" role="img"
+            aria-label="Attack distribution by service"></canvas>
+            <p class="chart-empty hidden" data-for="chart-dist">No data available</p></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Attack Activity Over Time</h3><span class="panel-note">hourly, UTC</span></div>
+          <div class="chart-holder"><canvas id="chart-time" role="img"
+            aria-label="Attack activity over time"></canvas>
+            <p class="chart-empty hidden" data-for="chart-time">No data available</p></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Threat Severity</h3><span class="panel-note">per source IP</span></div>
+          <div class="chart-holder"><canvas id="chart-sev" role="img"
+            aria-label="Threat severity distribution"></canvas>
+            <p class="chart-empty hidden" data-for="chart-sev">No data available</p></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>MITRE Technique Frequency</h3><span class="panel-note">observed only</span></div>
+          <div class="chart-holder"><canvas id="chart-mitre" role="img"
+            aria-label="MITRE technique frequency"></canvas>
+            <p class="chart-empty hidden" data-for="chart-mitre">No data available</p></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Top Attacker IPs</h3>
+          <span class="panel-note">ranked by captured events · scored by the project's threat engine</span></div>
+        <div class="table-scroll">
+          <table class="tbl">
+            <thead><tr>
+              <th scope="col">#</th><th scope="col">Source IP</th><th scope="col">Events</th>
+              <th scope="col">Services</th><th scope="col">Threat Score</th>
+              <th scope="col">Severity</th><th scope="col">First Seen</th><th scope="col">Last Seen</th>
+            </tr></thead>
+            <tbody id="tbody-ips"><tr class="loading-row"><td colspan="8">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- LIVE ATTACK FEED ---------- -->
+    <section id="live-attacks" class="section" aria-labelledby="feed-h">
+      <div class="section-head">
+        <h2 id="feed-h">Live Attack Feed</h2>
+        <span class="section-note" id="feed-count">–</span>
+      </div>
+
+      <div class="panel">
+        <div class="filter-bar" role="group" aria-label="Attack feed filters">
+          <div class="field">
+            <label for="f-ip">Source IP</label>
+            <input id="f-ip" type="search" placeholder="e.g. 172.20.0.1" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f-service">Service</label>
+            <select id="f-service"><option value="">All services</option>
+              <option value="ssh">SSH</option><option value="http">HTTP</option>
+              <option value="smb">SMB</option></select>
+          </div>
+          <div class="field">
+            <label for="f-severity">Severity</label>
+            <select id="f-severity"><option value="">All severities</option>
+              <option value="CRITICAL">Critical</option><option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option><option value="LOW">Low</option></select>
+          </div>
+          <div class="field">
+            <label for="f-event">Event Type</label>
+            <select id="f-event"><option value="">All events</option></select>
+          </div>
+          <div class="field">
+            <label for="f-mitre">MITRE Technique</label>
+            <select id="f-mitre"><option value="">All techniques</option></select>
+          </div>
+          <button id="f-reset" class="btn btn-ghost" type="button">Reset</button>
+        </div>
+
+        <div class="table-scroll">
+          <table class="tbl tbl-feed">
+            <thead><tr>
+              <th scope="col" data-sort="timestamp" class="sortable" aria-sort="descending">Timestamp</th>
+              <th scope="col" data-sort="src_ip" class="sortable">Source IP</th>
+              <th scope="col" data-sort="service" class="sortable">Service</th>
+              <th scope="col" data-sort="event_type" class="sortable">Event Type</th>
+              <th scope="col">Username</th>
+              <th scope="col" data-sort="threat_score" class="sortable">Score</th>
+              <th scope="col" data-sort="severity" class="sortable">Severity</th>
+              <th scope="col">MITRE</th>
+              <th scope="col">Status</th>
+            </tr></thead>
+            <tbody id="tbody-feed"><tr class="loading-row"><td colspan="9">Loading…</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <button class="btn btn-ghost" id="pg-prev" type="button">‹ Prev</button>
+          <span id="pg-info" class="pager-info">–</span>
+          <button class="btn btn-ghost" id="pg-next" type="button">Next ›</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- MITRE ---------- -->
+    <section id="mitre" class="section" aria-labelledby="mitre-h">
+      <div class="section-head">
+        <h2 id="mitre-h">MITRE ATT&amp;CK Coverage</h2>
+        <span class="section-note">Observed techniques from real captured events</span>
+      </div>
+      <div class="panel">
+        <div class="mitre-grid" id="mitre-grid">
+          <p class="empty">Loading…</p>
+        </div>
+        <div class="table-scroll">
+          <table class="tbl">
+            <thead><tr>
+              <th scope="col">Technique ID</th><th scope="col">Technique Name</th>
+              <th scope="col">Tactic</th><th scope="col">Occurrences</th><th scope="col">Severity</th>
+            </tr></thead>
+            <tbody id="tbody-mitre"><tr class="loading-row"><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- AI DETECTION ---------- -->
+    <section id="ai-detection" class="section" aria-labelledby="ai-h">
+      <div class="section-head">
+        <h2 id="ai-h">AI Threat Analysis</h2>
+        <span class="section-note" id="ai-engine">–</span>
+      </div>
+      <div class="panel panel-accent">
+        <div class="ai-summary" id="ai-summary"></div>
+        <div class="table-scroll">
+          <table class="tbl">
+            <thead><tr>
+              <th scope="col">Detected</th><th scope="col">Source IP</th><th scope="col">Score</th>
+              <th scope="col">Severity</th><th scope="col">Attempts</th>
+              <th scope="col">Technique</th><th scope="col">Tactic</th><th scope="col">Reason</th>
+            </tr></thead>
+            <tbody id="tbody-ai"><tr class="loading-row"><td colspan="8">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- HONEYPOT HEALTH ---------- -->
+    <section id="honeypots" class="section" aria-labelledby="hp-h">
+      <div class="section-head">
+        <h2 id="hp-h">Honeypot Health</h2>
+        <span class="section-note">Status verified by live TCP probe from the dashboard service</span>
+      </div>
+      <div class="hp-grid" id="hp-grid"><p class="empty">Loading…</p></div>
+    </section>
+
+    <!-- ---------- QUARANTINE ---------- -->
+    <section id="quarantine" class="section" aria-labelledby="q-h">
+      <div class="section-head">
+        <h2 id="q-h">Quarantine / Blocklist</h2>
+        <span class="section-note" id="q-note">–</span>
+      </div>
+      <div class="panel">
+        <div class="table-scroll">
+          <table class="tbl">
+            <thead><tr>
+              <th scope="col">IP Address</th><th scope="col">Reason</th><th scope="col">Attacks</th>
+              <th scope="col">Threat Score</th><th scope="col">Detected</th>
+              <th scope="col">MITRE</th><th scope="col">Status</th>
+            </tr></thead>
+            <tbody id="tbody-quarantine"><tr class="loading-row"><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- REPORTS ---------- -->
+    <section id="reports" class="section" aria-labelledby="rep-h">
+      <div class="section-head">
+        <h2 id="rep-h">Reports &amp; Export</h2>
+        <span class="section-note">Generated from the current dataset</span>
+      </div>
+      <div class="grid-3">
+        <article class="export-card">
+          <h3>PDF Report</h3>
+          <p>Executive summary: totals, severity breakdown, top attacker IPs and observed techniques.</p>
+          <button class="btn btn-primary" id="btn-pdf" type="button">Export PDF</button>
+        </article>
+        <article class="export-card">
+          <h3>CSV Dataset</h3>
+          <p>Flat attack event table for spreadsheet or SIEM ingestion.</p>
+          <a class="btn btn-secondary" href="/api/export/csv" download>Export CSV</a>
+        </article>
+        <article class="export-card">
+          <h3>JSON Snapshot</h3>
+          <p>Full API payload including analytics, MITRE, AI analyses and quarantine state.</p>
+          <a class="btn btn-secondary" href="/api/export/json" download>Export JSON</a>
+        </article>
+      </div>
+    </section>
+
+    <!-- ---------- SETTINGS ---------- -->
+    <section id="settings" class="section" aria-labelledby="set-h">
+      <div class="section-head">
+        <h2 id="set-h">Settings</h2>
+        <span class="section-note">Runtime values reported by the backend</span>
+      </div>
+      <div class="panel">
+        <div class="settings-grid">
+          <div class="field">
+            <label for="s-refresh">Auto-refresh interval</label>
+            <select id="s-refresh">
+              <option value="5">5 seconds</option>
+              <option value="10" selected>10 seconds</option>
+              <option value="30">30 seconds</option>
+              <option value="0">Paused</option>
+            </select>
+          </div>
+          <dl class="meta-list" id="settings-meta"></dl>
+        </div>
+      </div>
+      <p class="foot-note">
+        Zero-Trust Micro Honeypot Mesh · defensive research project ·
+        all metrics computed from JSON honeypot logs, no synthetic data.
+      </p>
+    </section>
+
+  </main>
 </div>
 
-<div class="stats-grid">
-    <div class="card card-ssh">
-        <div class="card-icon">🔐</div>
-        <div class="card-label">SSH ATTACKS</div>
-        <div class="card-number" id="ssh-count">0</div>
-    </div>
-    <div class="card card-http">
-        <div class="card-icon">🌐</div>
-        <div class="card-label">HTTP ATTACKS</div>
-        <div class="card-number" id="http-count">0</div>
-    </div>
-    <div class="card card-smb">
-        <div class="card-icon">📁</div>
-        <div class="card-label">SMB ATTACKS</div>
-        <div class="card-number" id="smb-count">0</div>
-    </div>
-    <div class="card card-total">
-        <div class="card-icon">⚡</div>
-        <div class="card-label">TOTAL ATTACKS</div>
-        <div class="card-number" id="total-count">0</div>
-    </div>
-    <div class="card card-high">
-        <div class="card-icon">🚨</div>
-        <div class="card-label">HIGH THREATS</div>
-        <div class="card-number" id="high-count">0</div>
-    </div>
-    <div class="card card-medium">
-        <div class="card-icon">⚠️</div>
-        <div class="card-label">MEDIUM THREATS</div>
-        <div class="card-number" id="medium-count">0</div>
-    </div>
-</div>
-
-<div class="charts-row">
-    <div class="chart-box">
-        <h2>📊 Attack Distribution</h2>
-        <canvas id="attackChart"></canvas>
-    </div>
-    <div class="chart-box">
-        <h2>🎯 MITRE ATT&CK</h2>
-        <canvas id="mitreChart"></canvas>
-    </div>
-</div>
-
-<div class="section">
-    <h2>🏆 Top Attacker IPs</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>IP Address</th>
-                <th>Attack Count</th>
-                <th>Threat Level</th>
-            </tr>
-        </thead>
-        <tbody id="ip-body"></tbody>
-    </table>
-</div>
-
-<div class="section">
-    <h2>🔍 Search & Filter</h2>
-    <div class="filter-row">
-        <input type="text" id="ip-search" placeholder="Search IP..." oninput="filterTable()">
-        <select id="type-filter" onchange="filterTable()">
-            <option value="">All Types</option>
-            <option value="AUTH_ATTEMPT_PASSWORD">SSH</option>
-            <option value="HTTP_LOGIN_ATTEMPT">HTTP</option>
-            <option value="SMB_CONNECTION_OPEN">SMB</option>
-        </select>
-    </div>
-</div>
-
-<div class="section">
-    <h2>📋 Live Attack Feed</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Type</th>
-                <th>Source IP</th>
-                <th>Username</th>
-                <th>Password</th>
-                <th>MITRE</th>
-                <th>Threat</th>
-            </tr>
-        </thead>
-        <tbody id="attack-body"></tbody>
-    </table>
-</div>
-
-<div class="footer">
-    Auto-refresh every 10 seconds | Zero-Trust Honeypot Mesh | Built with ❤️
-</div>
-
-<script src="/static/script.js"></script>
+<script src="/static/script.js" defer></script>
 </body>
 </html>

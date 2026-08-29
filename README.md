@@ -165,6 +165,10 @@ chmod +x start.sh
 docker compose up --build
 ```
 
+This starts six containers: the three honeypots plus the mesh controller, the
+AI anomaly detector and the dashboard — all sharing the `honeypot-logs` volume,
+so the dashboard reads the same JSON logs the honeypots write.
+
 ### Access Dashboard
 
 Open your browser and go to:
@@ -202,18 +206,46 @@ Share this URL with anyone — they can view your live dashboard from anywhere i
 
 ## 📊 Dashboard Features
 
+The dashboard is a **SOC Command Center** interface: a dark, sidebar-driven
+console covering monitoring, threat intel, MITRE coverage, honeypot health,
+quarantine and reporting. Every metric is computed from the JSON honeypot logs —
+no hardcoded or sample data. Where a value is unavailable the UI renders `N/A`
+or an explicit empty state.
+
 | Feature | Description |
 |---|---|
-| Live Stats | Real-time SSH, HTTP, SMB attack counts |
-| Attack Charts | Doughnut chart for attack distribution |
-| MITRE Heatmap | Bar chart for ATT&CK techniques |
-| Top Attacker IPs | Ranked list with threat levels |
-| Search & Filter | Filter by IP or attack type |
-| Live Attack Feed | Real-time attack log table |
-| PDF Export | Download full attack report |
-| CSV Export | Export raw attack data |
-| JSON Export | Raw API data |
-| Auto Refresh | Updates every 10 seconds |
+| SOC Command Center | Sidebar navigation, sticky header, live status pills |
+| KPI Cards | Total / SSH / HTTP / SMB attacks, high-severity IPs, quarantined IPs |
+| Live Attack Feed | Sortable, filterable, paginated event table with severity badges |
+| Attack Analytics | Distribution, activity-over-time, severity and MITRE frequency charts |
+| MITRE ATT&CK | Technique cards + table (ID, name, tactic, occurrences, severity) |
+| AI Threat Analysis | Scores, severity, attempts, technique and reason per detection |
+| Honeypot Health | Per-service status verified by live TCP probe, event counts, last event |
+| Quarantine | Mesh controller blocklist with attempts, score and detection time |
+| Alerts | Notification panel driven by real high-threat / quarantine / outage conditions |
+| Filters | IP, service, severity, event type, MITRE technique + global search |
+| Exports | PDF report, CSV dataset, JSON snapshot |
+| Auto Refresh | Async updates every 10 seconds (configurable, no page reload) |
+| Responsive | Desktop-first, collapsing sidebar for tablet and mobile |
+| Accessibility | Skip link, keyboard-sortable headers, ARIA labels, readable contrast |
+
+### API Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/stats` | Full aggregated payload (KPIs, feed, analytics, AI, quarantine, health, alerts) |
+| `GET /api/health` | Honeypot status with live TCP reachability probe |
+| `GET /api/mitre` | Observed MITRE technique frequency |
+| `GET /api/ai` | AI anomaly detector analyses |
+| `GET /api/quarantine` | Mesh controller quarantine state |
+| `GET /api/alerts` | Derived alert conditions |
+| `GET /api/export/csv` | Attack events as CSV |
+| `GET /api/export/json` | Full snapshot as downloadable JSON |
+
+> The threat scoring and MITRE mapping shown in the dashboard are imported
+> directly from `ai/anomaly_detector.py`. The detection engine is **rule-based
+> anomaly scoring**, not a machine-learning model, and the UI states this
+> explicitly rather than overselling it.
 
 ---
 

@@ -63,8 +63,11 @@ def process_event(event: dict):
 
 
 def watch_log_file(log_file: str):
-    if not os.path.exists(log_file):
-        return
+    # The log file may not exist yet when this process starts (e.g. a honeypot
+    # container is still booting), so wait for it instead of giving up.
+    while not os.path.exists(log_file):
+        time.sleep(2)
+
     with open(log_file, "r") as f:
         f.seek(0, 2)
         while True:

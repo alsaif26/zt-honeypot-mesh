@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+LABEL project="zt-honeypot-mesh"
+LABEL service="dashboard"
+
+RUN groupadd -r honeypot && useradd -r -g honeypot -m honeypot
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY config/        ./config/
+COPY core_logging/  ./core_logging/
+COPY ai/            ./ai/
+COPY mesh/          ./mesh/
+COPY dashboard/     ./dashboard/
+
+RUN mkdir -p /app/logs && chown -R honeypot:honeypot /app/logs
+
+USER honeypot
+
+EXPOSE 8888
+
+CMD ["python", "-u", "dashboard/app.py"]
